@@ -1,6 +1,6 @@
 package main
 
-import "Intranet-text-transmission/client"
+import "udp-basic-communication/client"
 
 func main() {
 	config := client.Config{

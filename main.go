@@ -1,7 +1,7 @@
 package main
 
 import (
-	"Intranet-text-transmission/start"
+	"udp-basic-communication/start"
 )
 
 func main() {

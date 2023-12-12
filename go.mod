@@ -1,3 +1,3 @@
-module Intranet-text-transmission
+module udp-basic-communication
 
 go 1.20

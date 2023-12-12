@@ -1,10 +1,10 @@
 package start
 
 import (
-	"Intranet-text-transmission/service"
 	"fmt"
 	"log"
 	"time"
+	"udp-basic-communication/service"
 )
 
 func StartServe() {

@@ -1,8 +1,8 @@
 package test
 
 import (
-	"Intranet-text-transmission/client"
 	"testing"
+	"udp-basic-communication/client"
 )
 
 func TestClient1(t *testing.T) {
