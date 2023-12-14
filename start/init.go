@@ -12,8 +12,10 @@ func StartServe() {
 	//defer server.CloseServe()
 	for {
 		log.Println("start Server")
-		server.GetClientAddr()
-		server.GetClientAddr()
+		firstClientAddr := server.GetClientAddr()
+		server.ReceiveClient(firstClientAddr)
+		secondClientAddr := server.GetClientAddr()
+		server.ReceiveClient(secondClientAddr)
 		fmt.Println("begin net \n")
 		server.ExchangeClientMsg()
 		time.Sleep(time.Second * 10)
