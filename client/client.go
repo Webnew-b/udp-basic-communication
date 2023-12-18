@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"log"
 	"net"
 )
@@ -14,7 +15,7 @@ type Config struct {
 
 type Client struct {
 	*Config
-	*receive
+	*Receive
 	*send
 
 	clientAddr *net.UDPAddr
@@ -27,20 +28,29 @@ type Client struct {
 
 func NewClient(config Config) *Client {
 	client := &Client{
-		Config: &config,
+		Receive: new(Receive),
+		send:    new(send),
+		Config:  &config,
 	}
+	client.setTargetClientAddr()
 	client.setClientAddr()
 	return client
 }
 
 func (c *Client) CreateClient() {
 	log.Println("client starting")
+	connect := c.createUDPConnection(c.clientAddr, c.targetClientAddr)
+	c.ReceiveConnect = connect
+	c.SendConnect = connect
 	c.receiveHandle()
-	c.sendHandle()
+	sth := make([]byte, 18)
+	for {
+		scanln, _ := fmt.Scanln(&sth)
+		log.Panicln(scanln)
+	}
 }
 
 func (c *Client) connectTargetClient() {
-	// todo 连接逻辑
 }
 
 func (c *Client) createUDPConnection(from, to *net.UDPAddr) *net.UDPConn {
@@ -53,28 +63,10 @@ func (c *Client) createUDPConnection(from, to *net.UDPAddr) *net.UDPConn {
 	return conn
 }
 
-//todo 判断消息类型
-//todo 验证消息
-//todo 显示消息
-
 func (c *Client) startInput() {
 	// todo 这个输入拓展成所有输入，不仅仅只是发消息
 	log.Println("Start Input")
 }
-
-/*func (c *Client) sendMsgToServer(msg string) {
-	text := message.Request{}
-
-	text.Type = msgType.SERVER_VERITY
-	text.Tag = c.Tag
-	text.Content = msg
-	buf := until.JsonMarshal(text)
-
-	_, err := c.serverConnect.Write(buf)
-	if err != nil {
-		panic(err)
-	}
-}*/
 
 func (c *Client) setClientAddr() {
 	c.clientAddr = new(net.UDPAddr)
@@ -82,10 +74,10 @@ func (c *Client) setClientAddr() {
 	c.clientAddr.Port = c.ClientPort
 }
 
-func (c *Client) SetTargetClientAddr(ip string, port int) {
+func (c *Client) setTargetClientAddr() {
 	c.targetClientAddr = new(net.UDPAddr)
-	c.targetClientAddr.IP = net.ParseIP(ip)
-	c.targetClientAddr.Port = port
+	c.targetClientAddr.IP = net.ParseIP(c.TargetClientIP)
+	c.targetClientAddr.Port = c.TargetClientPort
 }
 
 func (c *Client) CloseConnection() {
@@ -94,12 +86,3 @@ func (c *Client) CloseConnection() {
 		log.Fatalln(err)
 	}
 }
-
-/*func (c *Client) parseAddr(addr string) *net.UDPAddr {
-	t := strings.Split(addr, ":")
-	port, _ := strconv.Atoi(t[1])
-	return &net.UDPAddr{
-		IP:   net.ParseIP(t[0]),
-		Port: port,
-	}
-}*/

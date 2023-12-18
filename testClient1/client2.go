@@ -4,10 +4,10 @@ import "udp-basic-communication/client"
 
 func main() {
 	config := client.Config{
-		ServerIP:   "0.0.0.0",
-		ServerPort: 9988,
-		ClientPort: 8080,
-		Tag:        "A",
+		TargetClientIP:   "127.0.0.1",
+		TargetClientPort: 8081,
+		ClientPort:       8080,
+		Tag:              "A",
 	}
 	testClient := client.NewClient(config)
 	testClient.CreateClient()

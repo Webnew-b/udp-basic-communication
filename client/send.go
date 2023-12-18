@@ -8,18 +8,14 @@ import (
 )
 
 type send struct {
-	Connect   *net.UDPConn
-	sendQueue []client_model.NormalMsg
+	SendConnect *net.UDPConn
+	sendQueue   []client_model.NormalMsg
 }
 
 func (s *send) sendHandle() {
 	for {
 		// todo 研究切片如何队列化，如何弹出队列元素和加入队列元素
 	}
-}
-
-func (s *send) pushMsgToQueue(msg client_model.NormalMsg) {
-	s.sendQueue = append(s.sendQueue, msg)
 }
 
 func (s *send) buildVerifyMsg() client_model.NormalMsg {
@@ -37,7 +33,7 @@ func (s *send) buildNorMsg(content string) client_model.NormalMsg {
 }
 
 func (s *send) sendMsg(msg []byte) {
-	_, err := s.Connect.Write(msg)
+	_, err := s.SendConnect.Write(msg)
 	if err != nil {
 		log.Println("send msg to other client fail", err)
 	}

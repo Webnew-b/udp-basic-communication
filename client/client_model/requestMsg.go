@@ -9,6 +9,7 @@ type Request struct {
 
 type ReceiveMsg struct {
 	*Request
+	Addr *net.UDPAddr
 }
 
 type NormalMsg struct {
@@ -18,4 +19,12 @@ type NormalMsg struct {
 type VerifyMsg struct {
 	*Request
 	Addr *net.UDPAddr
+}
+
+func (this NormalMsg) ProcessQueueMsg() {
+	//todo 显示消息
+}
+
+func (this VerifyMsg) ProcessQueueMsg() {
+	//todo 验证消息
 }
