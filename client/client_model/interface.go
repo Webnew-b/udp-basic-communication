@@ -8,5 +8,9 @@ type Queue[T any] interface {
 }
 
 type Msg interface {
-	ProcessQueueMsg()
+	BuildMsg(content string) []byte
+}
+
+type ReceiveQueueMsg interface {
+	ProcessReceiveQueueMsg()
 }

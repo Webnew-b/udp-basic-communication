@@ -10,19 +10,21 @@ import (
 )
 
 type Receive struct {
-	msgChannel     chan []byte
-	MsgQueue       client_model.Queue[client_model.NormalMsg]
-	VerifyQueue    client_model.Queue[client_model.VerifyMsg]
-	ReceiveConnect *net.UDPConn
+	msgChannel                  chan []byte
+	ReceiveQueue                client_model.Queue[client_model.NormalMsg]
+	VerifyQueue                 client_model.Queue[client_model.VerifyMsg]
+	ReceiveConnect              *net.UDPConn
+	VerifyQueueListenerWorking  *bool
+	ReceiveQueueListenerWorking *bool
 }
 
 func (this *Receive) receiveHandle() {
 	this.VerifyQueue = new(client_model.VerifyQueue)
-	this.MsgQueue = new(client_model.MsgQueue)
+	this.ReceiveQueue = new(client_model.MsgQueue)
 	log.Println("Start receive")
 	go this.receiveMsg()
-	go listener.StartMsgQueueListener[client_model.VerifyMsg](this.VerifyQueue)
-	go listener.StartMsgQueueListener[client_model.NormalMsg](this.MsgQueue)
+	go listener.StartReceiveMsgQueueListener[client_model.VerifyMsg](this.VerifyQueue, this.VerifyQueueListenerWorking)
+	go listener.StartReceiveMsgQueueListener[client_model.NormalMsg](this.ReceiveQueue, this.ReceiveQueueListenerWorking)
 	log.Println("start finish")
 }
 
@@ -53,14 +55,14 @@ func (this *Receive) putMessageToQueue(msg *client_model.ReceiveMsg) {
 		norMsg := client_model.NormalMsg{
 			Request: msg.Request,
 		}
-		this.MsgQueue.Push(norMsg)
+		this.ReceiveQueue.Push(norMsg)
 	default:
 		log.Println("error msg type")
 	}
 }
 
 func (this *Receive) isMsgQueueEmpty() bool {
-	return this.MsgQueue.Length() == 0
+	return this.ReceiveQueue.Length() == 0
 }
 
 func (this *Receive) handleMsg(msg any) {

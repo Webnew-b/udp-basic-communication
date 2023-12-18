@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"udp-basic-communication/client/client_model"
 )
 
 type Config struct {
@@ -43,14 +44,12 @@ func (c *Client) CreateClient() {
 	c.ReceiveConnect = connect
 	c.SendConnect = connect
 	c.receiveHandle()
-	sth := make([]byte, 18)
-	for {
-		scanln, _ := fmt.Scanln(&sth)
-		log.Panicln(scanln)
-	}
+	c.sendHandle()
+
 }
 
 func (c *Client) connectTargetClient() {
+	// TODO 发送验证消息
 }
 
 func (c *Client) createUDPConnection(from, to *net.UDPAddr) *net.UDPConn {
@@ -66,6 +65,11 @@ func (c *Client) createUDPConnection(from, to *net.UDPAddr) *net.UDPConn {
 func (c *Client) startInput() {
 	// todo 这个输入拓展成所有输入，不仅仅只是发消息
 	log.Println("Start Input")
+	sth := make([]byte, 18)
+	for {
+		scanln, _ := fmt.Scanln(&sth)
+		log.Panicln(scanln)
+	}
 }
 
 func (c *Client) setClientAddr() {
@@ -85,4 +89,10 @@ func (c *Client) CloseConnection() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+}
+
+func (c *Client) SendMsg(content string) {
+	msg := new(client_model.NormalMsg)
+	buf := msg.BuildMsg(content)
+	c.sendQueue.Push(buf)
 }
