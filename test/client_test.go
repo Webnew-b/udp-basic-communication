@@ -30,5 +30,5 @@ func TestSlice(t *testing.T) {
 	p := "{\"type\":3000,\"content\":\"hello\"}"
 	var msg = client_model.ReceiveMsg{}
 	until.JsonUnmarshal([]byte(p), &msg)
-	log.Println(msg.Request)
+	log.Println(msg.Content)
 }

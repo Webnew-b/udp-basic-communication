@@ -6,15 +6,16 @@ import (
 )
 
 type NormalMsg struct {
-	*Request
+	Type    uint16 `json:"type"`
+	Content string `json:"content"`
 }
 
 func (this NormalMsg) ProcessReceiveQueueMsg() {
-	//todo 显示消息
+	until.PrintMsg(this.Content)
 }
 
 func (this NormalMsg) BuildMsg(content string) []byte {
-	msg := NormalMsg{}
+	msg := new(NormalMsg)
 	msg.Type = msgType.CLIENT_MSG
 	msg.Content = content
 	buf := until.JsonMarshal(msg)

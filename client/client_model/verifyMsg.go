@@ -7,12 +7,14 @@ import (
 )
 
 type VerifyMsg struct {
-	*Request
-	Addr *net.UDPAddr
+	Type    uint16 `json:"type"`
+	Content string `json:"content"`
+	Addr    *net.UDPAddr
 }
 
 func (this VerifyMsg) ProcessReceiveQueueMsg() {
 	//todo 验证消息
+	until.PrintMsg(this.Content)
 }
 
 func (this VerifyMsg) BuildMsg(content string) []byte {

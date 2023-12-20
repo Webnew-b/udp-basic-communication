@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"udp-basic-communication/client/client_model"
@@ -45,7 +44,7 @@ func (c *Client) CreateClient() {
 	c.SendConnect = connect
 	c.receiveHandle()
 	c.sendHandle()
-
+	//c.startInput()
 }
 
 func (c *Client) connectTargetClient() {
@@ -64,12 +63,7 @@ func (c *Client) createUDPConnection(from, to *net.UDPAddr) *net.UDPConn {
 
 func (c *Client) startInput() {
 	// todo 这个输入拓展成所有输入，不仅仅只是发消息
-	log.Println("Start Input")
-	sth := make([]byte, 18)
-	for {
-		scanln, _ := fmt.Scanln(&sth)
-		log.Panicln(scanln)
-	}
+
 }
 
 func (c *Client) setClientAddr() {

@@ -1,6 +1,10 @@
 package main
 
-import "udp-basic-communication/client"
+import (
+	"log"
+	"time"
+	"udp-basic-communication/client"
+)
 
 func main() {
 	config := client.Config{
@@ -11,4 +15,8 @@ func main() {
 	}
 	testClient := client.NewClient(config)
 	testClient.CreateClient()
+	time.Sleep(time.Second * 5)
+	log.Println("send Msg")
+	testClient.SendMsg("how are you Tom")
+	time.Sleep(time.Second * 5)
 }
