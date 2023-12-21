@@ -1,61 +1,97 @@
 package listener
 
 import (
-	"log"
+	"fmt"
 	"sync"
 	"time"
-	"udp-basic-communication/client/client_model"
+	"udp-basic-communication/enum/listenerStatus"
 )
 
-var (
-	mutex      sync.Mutex
-	stopCond   = sync.NewCond(&mutex)
-	stopChan   = make(chan bool)
-	stopSymbol = false
-)
+type Listener[T any] struct {
+	name       string
+	stopSymbol listenerStatus.Status
+	frequency  uint16
 
-func StartReceiveMsgQueueListener[T client_model.ReceiveQueueMsg](queue client_model.Queue[T], isWorking *bool) {
-	for {
-		mutex.Lock()
-		for stopConditionNotMet() { // 这是一个示例条件检查函数
-			stopCond.Wait() // 等待停止信号
-		}
-		mutex.Unlock()
+	mutex     sync.Mutex
+	stopCond  *sync.Cond
+	Channel   chan T
+	isWorking bool
+}
 
-		// 一旦收到停止信号，退出循环
-		if stopNeeded() {
-			*isWorking = false
-			break
-		}
-
-		// 检查队列是否为空
-		if queue.IsQueueEmpty() {
-			time.Sleep(time.Millisecond * 100)
-			continue
-		}
-		*isWorking = true
-		msg, err := queue.Pop()
-		if err != nil {
-			log.Println("Error popping from MsgQueue:", err)
-			continue
-		}
-		msg.ProcessReceiveQueueMsg()
-
+func NewListener[T any](name string, frequency uint16) (*Listener[T], error) {
+	if frequency == 0 {
+		return nil, fmt.Errorf("frequency cannot be zero")
 	}
+	listener := Listener[T]{
+		name:       name,
+		stopSymbol: listenerStatus.STOP,
+		frequency:  frequency,
+	}
+	listener.mutex.Lock()
+	listener.stopCond = sync.NewCond(&listener.mutex)
+	return &listener, nil
 }
 
-func StopAllListeners() {
-	mutex.Lock()
-	stopSymbol = true
-	stopChan <- true
-	mutex.Unlock()
-	stopCond.Broadcast() // 发送广播通知所有监听器
+func (l *Listener[T]) Run(action func(channel chan T)) error {
+	if l.isWorking {
+		return fmt.Errorf("listener is already running")
+	}
+	l.isWorking = true
+	go func() {
+		l.stopSymbol = listenerStatus.START
+		for {
+			isStop := l.HandleStatusChange()
+			if isStop {
+				l.isWorking = false
+				break
+			}
+			action(l.Channel)
+		}
+	}()
+	return nil
 }
 
-func stopConditionNotMet() bool {
-	return !stopSymbol
+func (l *Listener[T]) HandleStatusChange() bool {
+	for l.isReadyToStop() {
+		l.stopCond.Wait()
+	}
+	if l.stopNeeded() {
+		return true
+	}
+	return false
 }
 
-func stopNeeded() bool {
-	return stopSymbol
+func (l *Listener[T]) StopListener() {
+	go func() {
+		l.stopSymbol = listenerStatus.READY_STOP
+		second := int(l.frequency) + 500
+		time.Sleep(time.Duration(second) * time.Millisecond)
+		l.stopSymbol = listenerStatus.STOP
+		l.stopCond.Broadcast()
+		time.Sleep(time.Duration(second) * time.Millisecond)
+	}()
+}
+
+func (l *Listener[T]) isReadyToStop() bool {
+	return l.stopSymbol == listenerStatus.READY_STOP
+}
+
+func (l *Listener[T]) stopNeeded() bool {
+	return l.stopSymbol == listenerStatus.STOP
+}
+
+func (l *Listener[T]) GetName() string {
+	return l.name
+}
+
+func (l *Listener[T]) GetStopSymbol() listenerStatus.Status {
+	return l.stopSymbol
+}
+
+func (l *Listener[T]) GetStopFrequency() uint16 {
+	return l.frequency
+}
+
+func (l *Listener[T]) IsWorking() bool {
+	return l.isWorking
 }

@@ -90,3 +90,9 @@ func (c *Client) SendMsg(content string) {
 	buf := msg.BuildMsg(content)
 	c.sendQueue.Push(buf)
 }
+
+func (c *Client) handleMsg(msgChannel chan client_model.NormalMsg) {
+	for msg := range msgChannel {
+		log.Println(msg.Content)
+	}
+}
