@@ -1,61 +1,84 @@
 package listener
 
 import (
-	"log"
 	"sync"
 	"time"
-	"udp-basic-communication/client/client_model"
+	"udp-basic-communication/enum/listenerStatus"
 )
 
-var (
+/*var (
 	mutex      sync.Mutex
 	stopCond   = sync.NewCond(&mutex)
 	stopChan   = make(chan bool)
 	stopSymbol = false
-)
+)*/
 
-func StartReceiveMsgQueueListener[T client_model.ReceiveQueueMsg](queue client_model.Queue[T], isWorking *bool) {
+type Listener[T any] struct {
+	name       string
+	stopSymbol listenerStatus.Status
+	frequency  uint16
+
+	mutex    sync.Mutex
+	stopCond *sync.Cond
+	channel  chan T
+}
+
+func NewListener[T any](name string, frequency uint16) *Listener[T] {
+	listener := Listener[T]{
+		name:       name,
+		stopSymbol: listenerStatus.STOP,
+		frequency:  frequency,
+	}
+	listener.mutex.Lock()
+	listener.stopCond = sync.NewCond(&listener.mutex)
+	return &listener
+}
+
+func (this *Listener[T]) Run(action func(channel chan T)) {
 	for {
-		mutex.Lock()
-		for stopConditionNotMet() { // 这是一个示例条件检查函数
-			stopCond.Wait() // 等待停止信号
-		}
-		mutex.Unlock()
-
-		// 一旦收到停止信号，退出循环
-		if stopNeeded() {
-			*isWorking = false
+		isStop := this.HandleStatusChange()
+		if isStop {
 			break
 		}
-
-		// 检查队列是否为空
-		if queue.IsQueueEmpty() {
-			time.Sleep(time.Millisecond * 100)
-			continue
-		}
-		*isWorking = true
-		msg, err := queue.Pop()
-		if err != nil {
-			log.Println("Error popping from MsgQueue:", err)
-			continue
-		}
-		msg.ProcessReceiveQueueMsg()
-
+		action(this.channel)
 	}
 }
 
-func StopAllListeners() {
-	mutex.Lock()
-	stopSymbol = true
-	stopChan <- true
-	mutex.Unlock()
-	stopCond.Broadcast() // 发送广播通知所有监听器
+func (this *Listener[T]) HandleStatusChange() bool {
+	for this.stopConditionNotMet() {
+		this.stopCond.Wait()
+	}
+	if this.stopNeeded() {
+		return true
+	}
+	return false
 }
 
-func stopConditionNotMet() bool {
-	return !stopSymbol
+func (this *Listener[T]) StopListener() {
+	this.stopSymbol = listenerStatus.READY_STOP
+	second := int(this.frequency) + 500
+	this.stopCond.Broadcast()
+	time.Sleep(time.Duration(second) * time.Millisecond)
+	this.stopSymbol = listenerStatus.STOP
+	time.Sleep(time.Duration(second) * time.Millisecond)
 }
 
-func stopNeeded() bool {
-	return stopSymbol
+func (this *Listener[T]) stopConditionNotMet() bool {
+	return this.stopSymbol == listenerStatus.READY_STOP
+}
+
+func (this *Listener[T]) stopNeeded() bool {
+	return this.stopSymbol == listenerStatus.STOP
+}
+
+func (this *Listener[T]) GetName() string {
+	return this.name
+}
+
+func (this *Listener[T]) GetStopSymbol() listenerStatus.Status {
+	return this.stopSymbol
+}
+
+func (this *Listener[T]) GetStopFrequency() uint16 {
+	return this.frequency
 }

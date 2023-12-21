@@ -10,24 +10,22 @@ import (
 )
 
 type Receive struct {
-	msgChannel                  chan []byte
-	ReceiveQueue                client_model.Queue[client_model.NormalMsg]
-	VerifyQueue                 client_model.Queue[client_model.VerifyMsg]
-	ReceiveConnect              *net.UDPConn
-	VerifyQueueListenerWorking  bool
-	ReceiveQueueListenerWorking bool
+	msgChannel        chan []byte
+	ReceiveQueue      client_model.Queue[client_model.NormalMsg]
+	VerifyQueue       client_model.Queue[client_model.VerifyMsg]
+	ReceiveConnect    *net.UDPConn
+	VerifyMsgListener *listener.Listener[client_model.VerifyMsg]
+	NormalMsgListener *listener.Listener[client_model.NormalMsg]
 }
 
 func (this *Receive) receiveHandle() {
 	this.VerifyQueue = new(client_model.VerifyQueue)
 	this.ReceiveQueue = new(client_model.MsgQueue)
-	this.ReceiveQueueListenerWorking = false
-	this.VerifyQueueListenerWorking = false
 
 	log.Println("Start receive")
 	go this.receiveMsg()
-	//go listener.StartReceiveMsgQueueListener[client_model.VerifyMsg](this.VerifyQueue, this.VerifyQueueListenerWorking)
-	go listener.StartReceiveMsgQueueListener[client_model.NormalMsg](this.ReceiveQueue, &this.ReceiveQueueListenerWorking)
+	this.VerifyMsgListener = listener.StartReceiveMsgQueueListener[client_model.VerifyMsg](this.VerifyQueue)
+	this.NormalMsgListener = listener.StartReceiveMsgQueueListener[client_model.NormalMsg](this.ReceiveQueue)
 	log.Println("start finish")
 }
 
