@@ -8,11 +8,16 @@ import (
 
 func StartReceiveMsgQueueListener[T any](queue client_model.Queue[T]) *Listener[T] {
 
-	queueListener := NewListener[T]("ReceiveQueue", 100)
+	queueListener, err := NewListener[T]("ReceiveQueue", 100)
 
-	go queueListener.Run(
+	if err != nil {
+		panic(err)
+	}
+
+	err = queueListener.Run(
 		func(channel chan T) {
 			if queue.IsQueueEmpty() {
+
 				time.Sleep(time.Millisecond * 100)
 				return
 			}
@@ -24,6 +29,9 @@ func StartReceiveMsgQueueListener[T any](queue client_model.Queue[T]) *Listener[
 			}
 		},
 	)
+	if err != nil {
+		panic(err)
+	}
 
 	return queueListener
 }

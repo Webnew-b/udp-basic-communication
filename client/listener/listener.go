@@ -1,29 +1,27 @@
 package listener
 
 import (
+	"fmt"
 	"sync"
 	"time"
 	"udp-basic-communication/enum/listenerStatus"
 )
-
-/*var (
-	mutex      sync.Mutex
-	stopCond   = sync.NewCond(&mutex)
-	stopChan   = make(chan bool)
-	stopSymbol = false
-)*/
 
 type Listener[T any] struct {
 	name       string
 	stopSymbol listenerStatus.Status
 	frequency  uint16
 
-	mutex    sync.Mutex
-	stopCond *sync.Cond
-	channel  chan T
+	mutex     sync.Mutex
+	stopCond  *sync.Cond
+	Channel   chan T
+	isWorking bool
 }
 
-func NewListener[T any](name string, frequency uint16) *Listener[T] {
+func NewListener[T any](name string, frequency uint16) (*Listener[T], error) {
+	if frequency == 0 {
+		return nil, fmt.Errorf("frequency cannot be zero")
+	}
 	listener := Listener[T]{
 		name:       name,
 		stopSymbol: listenerStatus.STOP,
@@ -31,54 +29,69 @@ func NewListener[T any](name string, frequency uint16) *Listener[T] {
 	}
 	listener.mutex.Lock()
 	listener.stopCond = sync.NewCond(&listener.mutex)
-	return &listener
+	return &listener, nil
 }
 
-func (this *Listener[T]) Run(action func(channel chan T)) {
-	for {
-		isStop := this.HandleStatusChange()
-		if isStop {
-			break
+func (l *Listener[T]) Run(action func(channel chan T)) error {
+	if l.isWorking {
+		return fmt.Errorf("listener is already running")
+	}
+	l.isWorking = true
+	go func() {
+		l.stopSymbol = listenerStatus.START
+		for {
+			isStop := l.HandleStatusChange()
+			if isStop {
+				l.isWorking = false
+				break
+			}
+			action(l.Channel)
 		}
-		action(this.channel)
-	}
+	}()
+	return nil
 }
 
-func (this *Listener[T]) HandleStatusChange() bool {
-	for this.stopConditionNotMet() {
-		this.stopCond.Wait()
+func (l *Listener[T]) HandleStatusChange() bool {
+	for l.isReadyToStop() {
+		l.stopCond.Wait()
 	}
-	if this.stopNeeded() {
+	if l.stopNeeded() {
 		return true
 	}
 	return false
 }
 
-func (this *Listener[T]) StopListener() {
-	this.stopSymbol = listenerStatus.READY_STOP
-	second := int(this.frequency) + 500
-	this.stopCond.Broadcast()
-	time.Sleep(time.Duration(second) * time.Millisecond)
-	this.stopSymbol = listenerStatus.STOP
-	time.Sleep(time.Duration(second) * time.Millisecond)
+func (l *Listener[T]) StopListener() {
+	go func() {
+		l.stopSymbol = listenerStatus.READY_STOP
+		second := int(l.frequency) + 500
+		time.Sleep(time.Duration(second) * time.Millisecond)
+		l.stopSymbol = listenerStatus.STOP
+		l.stopCond.Broadcast()
+		time.Sleep(time.Duration(second) * time.Millisecond)
+	}()
 }
 
-func (this *Listener[T]) stopConditionNotMet() bool {
-	return this.stopSymbol == listenerStatus.READY_STOP
+func (l *Listener[T]) isReadyToStop() bool {
+	return l.stopSymbol == listenerStatus.READY_STOP
 }
 
-func (this *Listener[T]) stopNeeded() bool {
-	return this.stopSymbol == listenerStatus.STOP
+func (l *Listener[T]) stopNeeded() bool {
+	return l.stopSymbol == listenerStatus.STOP
 }
 
-func (this *Listener[T]) GetName() string {
-	return this.name
+func (l *Listener[T]) GetName() string {
+	return l.name
 }
 
-func (this *Listener[T]) GetStopSymbol() listenerStatus.Status {
-	return this.stopSymbol
+func (l *Listener[T]) GetStopSymbol() listenerStatus.Status {
+	return l.stopSymbol
 }
 
-func (this *Listener[T]) GetStopFrequency() uint16 {
-	return this.frequency
+func (l *Listener[T]) GetStopFrequency() uint16 {
+	return l.frequency
+}
+
+func (l *Listener[T]) IsWorking() bool {
+	return l.isWorking
 }
