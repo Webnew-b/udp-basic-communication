@@ -16,18 +16,17 @@ var (
 
 func StartReceiveMsgQueueListener[T client_model.ReceiveQueueMsg](queue client_model.Queue[T], isWorking *bool) {
 	for {
-		/*mutex.Lock()
+		mutex.Lock()
 		for stopConditionNotMet() { // 这是一个示例条件检查函数
 			stopCond.Wait() // 等待停止信号
 		}
 		mutex.Unlock()
 
 		// 一旦收到停止信号，退出循环
-		fmt.Println(!!stopNeeded(), "aaaaa")
 		if stopNeeded() {
 			*isWorking = false
 			break
-		}*/
+		}
 
 		// 检查队列是否为空
 		if queue.IsQueueEmpty() {
@@ -54,9 +53,9 @@ func StopAllListeners() {
 }
 
 func stopConditionNotMet() bool {
-	return !!stopSymbol
+	return !stopSymbol
 }
 
 func stopNeeded() bool {
-	return <-stopChan
+	return stopSymbol
 }
