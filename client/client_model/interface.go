@@ -7,10 +7,6 @@ type Queue[T any] interface {
 	IsQueueEmpty() bool
 }
 
-type Msg interface {
-	BuildMsg(content string) []byte
-}
-
 type ReceiveQueueMsg interface {
 	ProcessReceiveQueueMsg()
 }

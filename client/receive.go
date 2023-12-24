@@ -24,8 +24,8 @@ func (this *Receive) receiveHandle() {
 
 	log.Println("Start receive")
 	go this.receiveMsg()
-	this.VerifyMsgListener = listener.StartReceiveMsgQueueListener[client_model.VerifyMsg](this.VerifyQueue)
-	this.NormalMsgListener = listener.StartReceiveMsgQueueListener[client_model.NormalMsg](this.ReceiveQueue)
+	this.VerifyMsgListener = listener.StartMsgQueueListener[client_model.VerifyMsg](this.VerifyQueue)
+	this.NormalMsgListener = listener.StartMsgQueueListener[client_model.NormalMsg](this.ReceiveQueue)
 	log.Println("start finish")
 }
 
@@ -47,6 +47,8 @@ func (this *Receive) receiveMsg() {
 func (this *Receive) putMessageToQueue(msg *client_model.ReceiveMsg) {
 	switch msg.Type {
 	case msgType.CLIENT_VERITY:
+	case msgType.CLIENT_AGREE:
+	case msgType.CLIENT_REJECT:
 		verify := client_model.VerifyMsg{
 			Type:    msg.Type,
 			Content: msg.Content,
@@ -62,4 +64,12 @@ func (this *Receive) putMessageToQueue(msg *client_model.ReceiveMsg) {
 	default:
 		log.Println("error msg type")
 	}
+}
+
+func (r *Receive) norMsgProcess() {
+	go func() {
+		for msg := range r.NormalMsgListener.Channel {
+			log.Println(msg.Content)
+		}
+	}()
 }

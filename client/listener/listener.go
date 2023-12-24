@@ -29,10 +29,11 @@ func NewListener[T any](name string, frequency uint16) (*Listener[T], error) {
 	}
 	listener.mutex.Lock()
 	listener.stopCond = sync.NewCond(&listener.mutex)
+	listener.Channel = make(chan T, 10)
 	return &listener, nil
 }
 
-func (l *Listener[T]) Run(action func(channel chan T)) error {
+func (l *Listener[T]) Run(action func(channel *chan T)) error {
 	if l.isWorking {
 		return fmt.Errorf("listener is already running")
 	}
@@ -45,7 +46,7 @@ func (l *Listener[T]) Run(action func(channel chan T)) error {
 				l.isWorking = false
 				break
 			}
-			action(l.Channel)
+			action(&l.Channel)
 		}
 	}()
 	return nil
@@ -61,15 +62,17 @@ func (l *Listener[T]) HandleStatusChange() bool {
 	return false
 }
 
-func (l *Listener[T]) StopListener() {
+func (l *Listener[T]) StopListener(wg *sync.WaitGroup) {
+	second := int(l.frequency) + 500
 	go func() {
+		defer wg.Done()
 		l.stopSymbol = listenerStatus.READY_STOP
-		second := int(l.frequency) + 500
 		time.Sleep(time.Duration(second) * time.Millisecond)
 		l.stopSymbol = listenerStatus.STOP
 		l.stopCond.Broadcast()
-		time.Sleep(time.Duration(second) * time.Millisecond)
 	}()
+	//stopSecond := second*2 + 5000
+	//time.Sleep(time.Duration(stopSecond) * time.Millisecond)
 }
 
 func (l *Listener[T]) isReadyToStop() bool {

@@ -1,9 +1,12 @@
 package client
 
 import (
+	"fmt"
 	"log"
 	"net"
+	"time"
 	"udp-basic-communication/client/client_model"
+	"udp-basic-communication/enum/msgType"
 )
 
 type Config struct {
@@ -39,16 +42,58 @@ func NewClient(config Config) *Client {
 
 func (c *Client) CreateClient() {
 	log.Println("client starting")
-	connect := c.createUDPConnection(c.clientAddr, c.targetClientAddr)
-	c.ReceiveConnect = connect
-	c.SendConnect = connect
+	c.setReceiveAndSendConn(c.targetClientAddr)
 	c.receiveHandle()
 	c.sendHandle()
 	//c.startInput()
 }
 
+func (c *Client) setReceiveAndSendConn(addr *net.UDPAddr) {
+	connect := c.createUDPConnection(c.clientAddr, addr)
+	c.ReceiveConnect = connect
+	c.SendConnect = connect
+}
+
 func (c *Client) connectTargetClient() {
-	// TODO 发送验证消息
+	msg := new(client_model.VerifyMsg)
+	buf := msg.BuildVerifyMsg("request Connecting By " + msg.Addr.String())
+	c.sendQueue.Push(buf)
+	log.Println("verify message be sent")
+	c.handleVerifyReply()
+}
+
+func (c *Client) agreeConnect() {
+	msg := new(client_model.VerifyMsg)
+	buf := msg.BuildAgreeMsg()
+	c.sendQueue.Push(buf)
+}
+
+func (c *Client) rejectConnect() {
+	msg := new(client_model.VerifyMsg)
+	buf := msg.BuildRejectMsg()
+	c.sendQueue.Push(buf)
+}
+
+func (c *Client) handleVerifyReply() {
+	go func() {
+		select {
+		case verifyMsg := <-c.VerifyMsgListener.Channel:
+			c.determiningMsgType(verifyMsg)
+		case <-time.After(5 * time.Second):
+			log.Println("connection is time out")
+		}
+	}()
+}
+
+func (c *Client) determiningMsgType(msg client_model.VerifyMsg) {
+	switch msg.Type {
+	case msgType.CLIENT_AGREE:
+		c.setReceiveAndSendConn(msg.Addr)
+	case msgType.CLIENT_REJECT:
+		addr := msg.Addr.String()
+		printStr := fmt.Sprintf("client(%s) reject connection", addr)
+		log.Println(printStr)
+	}
 }
 
 func (c *Client) createUDPConnection(from, to *net.UDPAddr) *net.UDPConn {
@@ -63,7 +108,6 @@ func (c *Client) createUDPConnection(from, to *net.UDPAddr) *net.UDPConn {
 
 func (c *Client) startInput() {
 	// todo 这个输入拓展成所有输入，不仅仅只是发消息
-
 }
 
 func (c *Client) setClientAddr() {

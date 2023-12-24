@@ -2,6 +2,7 @@ package listener_test
 
 import (
 	"github.com/stretchr/testify/assert"
+	"sync"
 	"testing"
 	"time"
 	"udp-basic-communication/client/listener"
@@ -26,18 +27,21 @@ func TestRun(t *testing.T) {
 	testListener, _ := listener.NewListener[string]("TestListener", 100)
 
 	// 第一次运行
-	err := testListener.Run(func(ch chan string) {})
+	err := testListener.Run(func(ch *chan string) {})
 	assert.Nil(t, err)
 
 	// 测试重复运行
-	err = testListener.Run(func(ch chan string) {})
+	err = testListener.Run(func(ch *chan string) {})
 	assert.NotNil(t, err)
 
 	// 测试是否正在运行
 	assert.True(t, testListener.IsWorking())
 
 	// 停止 Listener 以允许其他测试进行
-	testListener.StopListener()
+	var wg sync.WaitGroup
+	wg.Add(1) // 在调用 StopListener 之前增加计数器
+	testListener.StopListener(&wg)
+	wg.Wait()
 	time.Sleep(200 * time.Millisecond)
 }
 
@@ -46,17 +50,64 @@ func TestStopListener(t *testing.T) {
 	testListener, _ := listener.NewListener[string]("TestListener", 100)
 
 	// 启动 Listener
-	err := testListener.Run(func(ch chan string) {})
+	err := testListener.Run(func(ch *chan string) {})
 	assert.NoError(t, err)
 	time.Sleep(100 * time.Millisecond)
 
 	// 停止 Listener
-	testListener.StopListener()
+	var wg sync.WaitGroup
+	wg.Add(1) // 在调用 StopListener 之前增加计数器
+	testListener.StopListener(&wg)
+	wg.Wait()
 
 	// 等待足够的时间以确保监听器已停止
 	time.Sleep(1000 * time.Millisecond)
 	assert.Equal(t, listenerStatus.STOP, testListener.GetStopSymbol())
 	assert.False(t, testListener.IsWorking())
+}
+
+func TestListenerChannel(t *testing.T) {
+	// 测试 NewListener
+	testListener, err := listener.NewListener[int]("TestListener", 100)
+	if err != nil {
+		t.Errorf("Failed to create new listener: %s", err)
+	}
+
+	// 测试 Run
+	err = testListener.Run(func(ch *chan int) {
+		// 发送测试数据到 channel
+		for i := 0; i < 11; i++ {
+			*ch <- i
+		}
+	})
+	if err != nil {
+		t.Errorf("Failed to run listener: %s", err)
+	}
+
+	// 等待一段时间以允许数据发送
+	time.Sleep(1 * time.Second)
+
+	// 测试 StopListener
+	var wg sync.WaitGroup
+	wg.Add(1) // 在调用 StopListener 之前增加计数器
+	testListener.StopListener(&wg)
+	wg.Wait()
+
+	// 确保 Listener 正确停止
+
+	assert.Equal(t, testListener.GetStopSymbol(), listenerStatus.STOP, "Listener status to wrong")
+
+	// 读取 channel 数据并验证
+	for i := 0; i < 11; i++ {
+		select {
+		case msg := <-testListener.Channel:
+			if msg != i {
+				t.Errorf("Expected %d, got %d", i, msg)
+			}
+		case <-time.After(1 * time.Second):
+			t.Errorf("Timed out waiting for message %d", i)
+		}
+	}
 }
 
 // TestGetName 测试 listener.Listener 的 GetName 方法。
